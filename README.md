@@ -1,5 +1,6 @@
 # Документация по Ansible проекту для развертывания веб-кластера на Proxmox
 
+
 ## Обзор проекта
 
 Данный проект автоматизирует развертывание высокодоступного веб-кластера на платформе Proxmox VE с использованием LXC контейнеров и Ansible. Архитектура включает:
@@ -7,6 +8,44 @@
 - **Балансировщик нагрузки** (HAProxy) - распределяет трафик между веб-серверами
 - **Веб-серверы** (2 экземпляра) - Nginx + PHP-FPM с приложением
 - **Сервер базы данных** - MySQL для хранения данных приложения
+
+
+### Инструкция по добавлению дополнительных веб-серверов
+Шаг 1: Добавление новых контейнеров в скрипт создания
+Отредактируйте файл create_containers.sh - добавьте новые контейнеры в массив CONTAINERS:
+
+# В секции "Конфигурация контейнеров" добавьте:
+```
+declare -A CONTAINERS=(
+    ["100"]="ct-lb,192.168.104.90,2,1,512,256"
+    ["101"]="ct-web1,192.168.104.91,5,1,1024,512" 
+    ["102"]="ct-web2,192.168.104.92,5,1,1024,512"
+    ["103"]="ct-web3,192.168.104.94,5,1,1024,512"  # НОВЫЙ
+    ["104"]="ct-web4,192.168.104.95,5,1,1024,512"  # НОВЫЙ
+    ["105"]="ct-db,192.168.104.93,10,2,2048,1024"  # ID изменен на 105
+)
+```
+Шаг 2: Обновление инвентаря Ansible
+Отредактируйте файл inventory.ini - добавьте новые веб-серверы:
+```
+[proxmox]
+192.168.104.177 ansible_user=root ansible_password=P@$$w0rd
+
+[load_balancer]
+ct-lb ansible_host=192.168.104.90 ansible_user=root ansible_password=P@$$w0rd
+
+[web_servers]
+ct-web1 ansible_host=192.168.104.91 ansible_user=root ansible_password=P@$$w0rd
+ct-web2 ansible_host=192.168.104.92 ansible_user=root ansible_password=P@$$w0rd
+ct-web3 ansible_host=192.168.104.94 ansible_user=root ansible_password=P@$$w0rd  # НОВЫЙ
+ct-web4 ansible_host=192.168.104.95 ansible_user=root ansible_password=P@$$w0rd  # НОВЫЙ
+
+[database]
+ct-db ansible_host=192.168.104.93 ansible_user=root ansible_password=P@$$w0rd ansible_python_interpreter=/usr/bin/python3
+
+[all:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+```
 
 ## Структура проекта
 
